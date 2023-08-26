@@ -1,4 +1,21 @@
-#include "lexer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_TOKEN_LENGTH 100
+
+typedef enum {
+    TOKEN_IDENTIFIER,
+    TOKEN_OPERATOR,
+    TOKEN_NUMBER,
+    TOKEN_EOF
+} TokenType;
+
+typedef struct {
+    TokenType type;
+    char value[MAX_TOKEN_LENGTH];
+} Token;
 
 Token* tokenize(FILE* inputFile) {
     Token* tokens = NULL;
@@ -85,4 +102,56 @@ Token* tokenize(FILE* inputFile) {
 
 void freeTokens(Token* tokens) {
     free(tokens);
+}
+
+int parseExpression(Token* tokens, int* currentIndex);
+
+int parseNumber(Token* tokens, int* currentIndex) {
+    int value = atoi(tokens[*currentIndex].value);
+    (*currentIndex)++;
+    return value;
+}
+
+int parseTerm(Token* tokens, int* currentIndex) {
+    int left = parseNumber(tokens, currentIndex);
+
+    while (tokens[*currentIndex].type == TOKEN_OPERATOR &&
+           (tokens[*currentIndex].value[0] == '+' || tokens[*currentIndex].value[0] == '-')) {
+        char operator = tokens[*currentIndex].value[0];
+        (*currentIndex)++;
+
+        int right = parseNumber(tokens, currentIndex);
+
+        if (operator == '+') {
+            left += right;
+        } else if (operator == '-') {
+            left -= right;
+        }
+    }
+
+    return left;
+}
+
+int parseExpression(Token* tokens, int* currentIndex) {
+    return parseTerm(tokens, currentIndex);
+}
+
+int main() {
+    FILE* inputFile = fopen("input.txt", "r");
+    if (!inputFile) {
+        printf("Error opening input file\n");
+        return 1;
+    }
+
+    Token* tokens = tokenize(inputFile);
+
+    int currentIndex = 0;
+    int result = parseExpression(tokens, &currentIndex);
+
+    printf("Result: %d\n", result);
+
+    freeTokens(tokens);
+    fclose(inputFile);
+
+    return 0;
 }
